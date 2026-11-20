@@ -441,7 +441,13 @@ MP_NOINLINE int main_(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     #endif
 
-    mp_stack_set_limit(40000 * (BYTES_PER_WORD / 4));
+    // 40000*factor (80 KiB on 64-bit) was too small once the unix port
+    // builds with MICROPY_NLR_SETJMP: conservative setjmp codegen inflates
+    // VM frames ~2.5x and legitimate deep-ish chains (e.g. import cycles
+    // through microur fountain/ur) trip the guard (bench 2026-11-20).
+    // 100000*factor = 200 KiB, still a tight runaway-recursion guard
+    // against the 8 MiB default thread stack.
+    mp_stack_set_limit(100000 * (BYTES_PER_WORD / 4));
 
     pre_process_options(argc, argv);
 
